@@ -71,6 +71,8 @@ class SectionFlowLayout<SectionType: Sections, HeaderType: UICollectionReusableV
   var allAttributes: [UICollectionViewLayoutAttributes] = []
   var layoutRect: CGRect = .zero
   var hasSectionHeaders: Bool = true
+  var insertedDecorationPaths: [IndexPath] = []
+  var deletedDecorationPaths: [IndexPath] = []
 
   private var contentHeight: CGFloat = 0.0
 
@@ -96,6 +98,16 @@ class SectionFlowLayout<SectionType: Sections, HeaderType: UICollectionReusableV
     }
     decorationAttributes = calculateDecorationAttributes(from: itemAttributes.map { $0.value })
     allAttributes = [headerAttributes, itemAttributes.map { $0.value }].flatMap { $0 }
+  }
+
+  override func prepare(forCollectionViewUpdates updateItems: [UICollectionViewUpdateItem]) {
+    insertedDecorationPaths = updateItems.filter { $0.updateAction == .insert }.compactMap { $0.indexPathAfterUpdate }
+    deletedDecorationPaths = updateItems.filter { $0.updateAction == .delete }.compactMap { $0.indexPathBeforeUpdate }
+  }
+
+  override func finalizeCollectionViewUpdates() {
+    insertedDecorationPaths = []
+    deletedDecorationPaths = []
   }
 
   func calculateHeaderAttributes() -> [UICollectionViewLayoutAttributes] {
@@ -201,6 +213,18 @@ class SectionFlowLayout<SectionType: Sections, HeaderType: UICollectionReusableV
 
   override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
     return collectionView?.bounds != newBounds
+  }
+
+  override func indexPathsToDeleteForDecorationView(ofKind elementKind: String) -> [IndexPath] {
+    guard elementKind == String(describing: SectionBackgroundReusableView.self) else { return [] }
+
+    return deletedDecorationPaths
+  }
+
+  override func indexPathsToInsertForDecorationView(ofKind elementKind: String) -> [IndexPath] {
+    guard elementKind == String(describing: SectionBackgroundReusableView.self) else { return [] }
+
+    return insertedDecorationPaths
   }
 
   override func invalidateLayout() {
